@@ -8,13 +8,18 @@ from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 import numpy as np
 import locale
 
-locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
+# Configuración del locale para números y fechas
+try:
+    locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
+except locale.Error:
+    st.warning("El locale 'es_ES.UTF-8' no está disponible. Se usará el locale predeterminado.")
+    locale.setlocale(locale.LC_ALL, '')
 
 st.set_page_config(page_title="Análisis de Ventas Mensuales", layout="wide", initial_sidebar_state="expanded")
 
 def mostrar_informacion_alumno():
     st.markdown("""
-        <div style="border: 1px; border-radius: 10px; padding: 15px; margin-bottom: 20px; background-color: #e3f2fd;">
+        <div style="border: 1px solid gray; border-radius: 10px; padding: 15px; margin-bottom: 20px; background-color: #e3f2fd;">
             <p><strong>Legajo:</strong> 58.894</p>
             <p><strong>Nombre:</strong> Flavia González Nacusse</p>
             <p><strong>Comisión:</strong> C5</p>
@@ -32,12 +37,11 @@ def cargar_datos(archivo):
             fila['Unidades_vendidas'] = int(fila['Unidades_vendidas'])
             fila['Ingreso_total'] = float(fila['Ingreso_total'])
             fila['Costo_total'] = float(fila['Costo_total'])
-            fila['Fecha'] = datetime(fila['Año'], fila['Mes'], 1) #POR QUE EL 1?
+            fila['Fecha'] = datetime(fila['Año'], fila['Mes'], 1)
             datos.append(fila)
         except ValueError:
             st.error("Error procesando una fila: asegúrate de que los valores sean correctos.")
     return datos
-
 
 def calcular_metricas(datos):
     productos = {}
@@ -81,25 +85,20 @@ def graficar_ventas(fechas, ventas, tendencia, producto):
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(fechas, ventas, label="Unidades Vendidas", linestyle="-", color="blue")
     ax.plot(fechas, tendencia, label="Tendencia", linestyle="--", color="red")
-    
     ax.xaxis.set_major_formatter(DateFormatter('%Y'))
     ax.xaxis.set_major_locator(YearLocator())
-    ax.xaxis.set_minor_locator(MonthLocator()) 
-    ax.grid(True, which='major', color='gray', linestyle='-', linewidth=0.5)  # Cuadrículas principales (para años)
-    ax.grid(True, which='minor', color='lightgray', linestyle='-', linewidth=0.5)  # Cuadrículas menores (para meses)
-
+    ax.xaxis.set_minor_locator(MonthLocator())
+    ax.grid(True, which='major', color='gray', linestyle='-', linewidth=0.5)
+    ax.grid(True, which='minor', color='lightgray', linestyle='-', linewidth=0.5)
     ax.set_title(f"Evolución de Ventas Mensual", fontsize=12)
     ax.set_xlabel("Año-Mes")
     ax.set_ylabel("Unidades Vendidas")
-    ax.grid(True)
     ax.legend()
-    
     return fig
 
 def mostrar_encabezado(sucursal):
     encabezado = f"Datos de {'Todas las Sucursales' if sucursal == 'Todas' else sucursal}"
-    st.markdown(f"<h2 style='text-align: center;'>{encabezado}</h1>", unsafe_allow_html=True)
-
+    st.markdown(f"<h2 style='text-align: center;'>{encabezado}</h2>", unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align: center;'>Análisis de Ventas Mensuales</h1>", unsafe_allow_html=True)
 st.sidebar.header("Cargar archivo de datos")
@@ -125,31 +124,22 @@ if archivo_cargado:
 
                     with col1:
                         st.subheader(producto)
-                        precio_variacion = calcular_porcentaje_variacion(
-                            metricas['Precio_medio'], metricas['precio_medio_anterior']
-                        )
                         st.metric(
                             "Precio Promedio",
                             f"${metricas['Precio_medio']:.2f}".replace(".", ","),
-                            f"{precio_variacion:.2f}%",
+                            f"{calcular_porcentaje_variacion(metricas['Precio_medio'], metricas['precio_medio_anterior']):.2f}%",
                             delta_color="inverse"
-                        )
-                        margen_variacion = calcular_porcentaje_variacion(
-                            metricas['Margen_medio'], metricas['margen_medio_anterior']
                         )
                         st.metric(
                             "Margen Promedio",
                             f"{metricas['Margen_medio'] * 100:.2f}%".replace(".", ","),
-                            f"{margen_variacion:.2f}%",
+                            f"{calcular_porcentaje_variacion(metricas['Margen_medio'], metricas['margen_medio_anterior']):.2f}%",
                             delta_color="inverse"
-                        )
-                        unidades_variacion = calcular_porcentaje_variacion(
-                            metricas['Unidades_vendidas'], metricas['unidades_vendidas_anterior']
                         )
                         st.metric(
                             "Unidades Vendidas",
                             f"{int(metricas['Unidades_vendidas']):,}".replace(",", "."),
-                            f"{unidades_variacion:.2f}%",
+                            f"{calcular_porcentaje_variacion(metricas['Unidades_vendidas'], metricas['unidades_vendidas_anterior']):.2f}%",
                             delta_color="inverse"
                         )
 
