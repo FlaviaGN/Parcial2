@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import matplotlib.pyplot as plt
 import csv
 from io import TextIOWrapper
@@ -6,14 +6,6 @@ from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from matplotlib.dates import DateFormatter, MonthLocator, YearLocator
 import numpy as np
-import locale
-
-# Configuración del locale para números y fechas
-try:
-    locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
-except locale.Error:
-    st.warning("El locale 'es_ES.UTF-8' no está disponible. Se usará el locale predeterminado.")
-    locale.setlocale(locale.LC_ALL, '')
 
 st.set_page_config(page_title="Análisis de Ventas Mensuales", layout="wide", initial_sidebar_state="expanded")
 
@@ -61,7 +53,6 @@ def calcular_metricas(datos):
         productos[producto]['Unidades_vendidas'] += fila['Unidades_vendidas']
         productos[producto]['ventas_totales'] += fila['Ingreso_total']
         productos[producto]['costos_totales'] += fila['Costo_total']
-
     for producto, metricas in productos.items():
         metricas['Precio_medio'] = metricas['ventas_totales'] / metricas['Unidades_vendidas']
         metricas['Margen_medio'] = (metricas['ventas_totales'] - metricas['costos_totales']) / metricas['ventas_totales']
@@ -93,6 +84,7 @@ def graficar_ventas(fechas, ventas, tendencia, producto):
     ax.set_title(f"Evolución de Ventas Mensual", fontsize=12)
     ax.set_xlabel("Año-Mes")
     ax.set_ylabel("Unidades Vendidas")
+    ax.grid(True)
     ax.legend()
     return fig
 
@@ -107,49 +99,51 @@ archivo_cargado = st.sidebar.file_uploader("Subir archivo CSV", type=["csv"])
 if archivo_cargado:
     try:
         datos = cargar_datos(archivo_cargado)
-
         if datos:
             sucursales = list(set(fila['Sucursal'] for fila in datos))
             sucursal_seleccionada = st.sidebar.selectbox("Seleccionar Sucursal", ["Todas"] + sucursales)
-
             if sucursal_seleccionada != "Todas":
                 datos = [fila for fila in datos if fila['Sucursal'] == sucursal_seleccionada]
-
             mostrar_encabezado(sucursal_seleccionada)
             metricas_por_producto = calcular_metricas(datos)
-
             for producto, metricas in metricas_por_producto.items():
                 with st.container():
                     col1, col2 = st.columns([1, 2])
-
                     with col1:
                         st.subheader(producto)
+                        precio_variacion = calcular_porcentaje_variacion(
+                            metricas['Precio_medio'], metricas['precio_medio_anterior']
+                        )
                         st.metric(
                             "Precio Promedio",
                             f"${metricas['Precio_medio']:.2f}".replace(".", ","),
-                            f"{calcular_porcentaje_variacion(metricas['Precio_medio'], metricas['precio_medio_anterior']):.2f}%",
+                            f"{precio_variacion:.2f}%",
                             delta_color="inverse"
+                        )
+                        margen_variacion = calcular_porcentaje_variacion(
+                            metricas['Margen_medio'], metricas['margen_medio_anterior']
                         )
                         st.metric(
                             "Margen Promedio",
                             f"{metricas['Margen_medio'] * 100:.2f}%".replace(".", ","),
-                            f"{calcular_porcentaje_variacion(metricas['Margen_medio'], metricas['margen_medio_anterior']):.2f}%",
+                            f"{margen_variacion:.2f}%",
                             delta_color="inverse"
+                        )
+                        unidades_variacion = calcular_porcentaje_variacion(
+                            metricas['Unidades_vendidas'], metricas['unidades_vendidas_anterior']
                         )
                         st.metric(
                             "Unidades Vendidas",
                             f"{int(metricas['Unidades_vendidas']):,}".replace(",", "."),
-                            f"{calcular_porcentaje_variacion(metricas['Unidades_vendidas'], metricas['unidades_vendidas_anterior']):.2f}%",
+                            f"{unidades_variacion:.2f}%",
                             delta_color="inverse"
                         )
-
                     with col2:
                         fechas = [fila['Fecha'] for fila in datos if fila['Producto'] == producto]
                         ventas = [fila['Unidades_vendidas'] for fila in datos if fila['Producto'] == producto]
                         tendencia = calcular_tendencia(fechas, np.array(ventas))
                         fig = graficar_ventas(fechas, ventas, tendencia, producto)
                         st.pyplot(fig)
-
     except Exception as e:
         st.error(f"Error al procesar el archivo: {e}")
 else:
