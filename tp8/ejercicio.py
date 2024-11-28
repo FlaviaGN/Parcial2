@@ -89,5 +89,5 @@ if archivo_cargado:
                 grafico = graficar_ventas(datos_producto, producto)
                 st.pyplot(grafico)
 else:
-    st.info("Por favor, sube un archivo CSV para comenzar.")
+    st.info("Por favor, sube un archivo CSV con los datos de ventas. Desde la barra lateral.")
     mostrar_informacion_alumno()
